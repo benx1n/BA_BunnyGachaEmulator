@@ -17,13 +17,14 @@ CARD_INFO = {}
 
 for id, card_info in cards.items():
     id = int(id)
-    if id < 100:
-        CARD_LIST.append(id)
-        CARD_PROB_LIST.append(card_info["card_prob"] / 10000)
-    else:
-        SPECIAL_CARD_LIST.append(id)
-        SPECIAL_CARD_PROB_LIST.append(card_info["card_prob"] / 10000)
-    CARD_INFO[id] = card_info
+    if card_info["card_EventContentId"] == 826:
+        if card_info["card_refresh_group"] < 4:
+            CARD_LIST.append(id)
+            CARD_PROB_LIST.append(card_info["card_prob"] / 10000)
+        else:
+            SPECIAL_CARD_LIST.append(id)
+            SPECIAL_CARD_PROB_LIST.append(card_info["card_prob"] / 10000)
+        CARD_INFO[id] = card_info
 
 
 class Card:
@@ -82,10 +83,11 @@ class Simulation:
         self.strategies = {
             1: "单抽后重置",
             2: "抽到金彩后重置",
-            # 3: "抽到金后重置",
-            # 4: "抽到彩后重置",
-            # 5: "抽完四张后重置",
+            3: "抽到金后重置",
+            4: "抽到彩后重置",
+            5: "抽完四张后重置",
             6: "第一张金彩刷新，第二张固定刷新",
+            7: "抽两张后刷新",
         }
         self.choose_deck = choose_deck
 
@@ -125,6 +127,7 @@ class Simulation:
                     or (strategy == 5 and len(cards) == 0)
                     or (strategy == 6 and card.card_type in ["SR", "SSR"])
                     or (strategy == 6 and len(cards) == 2)
+                    or (strategy == 7 and len(cards) == 2)
                 ):
                     break
 
@@ -194,8 +197,19 @@ def print_strategy_differences(average_results, average_rewards):
     }
     print(f"\n策略{base_strategy_num}: {simulation.strategies[base_strategy_num]}")
     print("策略{}的平均抽卡结果:".format(base_strategy_num))
+    for _ in base_results_formatted:
+        total_cards = sum(
+            [
+                average_results[base_strategy_num][each]
+                for each in base_results_formatted
+            ]
+        )
     for card, value in base_results_formatted.items():
-        print(" {}: {}".format(card, value))
+        print(
+            " {}: {}|{:.2f}%".format(
+                card, value, float(value) / float(total_cards) * 100
+            )
+        )
     print("\n策略{}的平均奖励数量:".format(base_strategy_num))
     for reward, value in base_rewards_formatted.items():
         print(" {}: {}".format(reward, value))
@@ -212,9 +226,15 @@ def print_strategy_differences(average_results, average_rewards):
         print(f"\n策略{strategy}: {simulation.strategies[strategy]}")
         print("策略{}的结果 (相对于策略{}的差异):".format(strategy, base_strategy_num))
         print("抽卡差异:")
+        for _ in base_results_formatted:
+            total_cards = sum(
+                [average_results[strategy][each] for each in base_results_formatted]
+            )
         for card, diff in card_type_diff.items():
             diff_color = print_colored_diff(diff)
-            print(f" {card}: {average_results[strategy][card]:.3f} ({diff_color})")
+            print(
+                f" {card}: {average_results[strategy][card]:.3f}|{float(average_results[strategy][card])/float(total_cards)*100:.2f}% ({diff_color})"
+            )
 
         print("奖励物品平均数量差异:")
         for reward in set(average_rewards[base_strategy_num]) | set(
@@ -227,7 +247,7 @@ def print_strategy_differences(average_results, average_rewards):
             print(f" {reward}: {strategy_value:.3f} ({diff_color})")
 
 
-TOTAL_TOKENS = 120000
+TOTAL_TOKENS = 34500
 NUM_SIMULATIONS = 1000
 simulation = Simulation(TOTAL_TOKENS, NUM_SIMULATIONS, Model1)
 average_results, average_rewards = simulation.simulate_strategies()
