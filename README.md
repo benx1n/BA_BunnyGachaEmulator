@@ -1,4 +1,4 @@
-# BA_BuddyGachaEmulator
+# BA_BunnyGachaEmulator
 
 ## 简介
 随便写的抽卡模拟，图一乐
